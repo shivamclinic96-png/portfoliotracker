@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <meta name="theme-color" content="#0f1117">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Kuber — Indian Portfolio Tracker</title>
+    <meta name="description" content="Premium portfolio tracker for Indian stock market. Track stocks, mutual funds, fixed deposits, ETFs with real-time analytics and rebalancing.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="css/style_v2.css">
+</head>
+<body>
+    <div class="app-container" style="display:flex;width:100%;height:100%;">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-chart-pie logo-icon"></i>
+                <h1>Kuber</h1>
+            </div>
+            <ul class="nav-links">
+                <li class="nav-item active" data-target="dashboard">
+                    <i class="fa-solid fa-border-all"></i><span>Dashboard</span>
+                </li>
+                <li class="nav-item" data-target="portfolio">
+                    <i class="fa-solid fa-wallet"></i><span>Portfolio</span>
+                </li>
+                <li class="nav-item" data-target="add-asset">
+                    <i class="fa-solid fa-plus-circle"></i><span>Add Asset</span>
+                </li>
+                <li class="nav-item" data-target="transactions">
+                    <i class="fa-solid fa-money-bill-transfer"></i><span>Transactions</span>
+                </li>
+                <li class="nav-item" data-target="analytics">
+                    <i class="fa-solid fa-chart-line"></i><span>Analytics</span>
+                </li>
+                <li class="nav-item" data-target="rebalancing">
+                    <i class="fa-solid fa-scale-balanced"></i><span>Rebalancing</span>
+                </li>
+                <li class="nav-item" data-target="data">
+                    <i class="fa-solid fa-file-import"></i><span>Data</span>
+                </li>
+            </ul>
+            <div class="user-profile">
+                <div class="avatar"><i class="fa-regular fa-user"></i></div>
+                <div class="user-info">
+                    <span class="user-name">Investor</span>
+                    <span class="user-status">Premium</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main -->
+        <main class="main-content">
+            <header class="top-header">
+                <h2 id="page-title">Dashboard</h2>
+                <div class="header-actions">
+                    <div class="view-toggle" id="device-toggle">
+                        <button onclick="setViewMode('mobile')" title="Mobile" class="device-btn" data-mode="mobile"><i class="fa-solid fa-mobile-screen"></i></button>
+                        <button onclick="setViewMode('tablet')" title="Tablet" class="device-btn" data-mode="tablet"><i class="fa-solid fa-tablet-screen-button"></i></button>
+                        <button onclick="setViewMode('desktop')" title="Desktop" class="device-btn active" data-mode="desktop"><i class="fa-solid fa-desktop"></i></button>
+                    </div>
+                    <button class="btn btn-text" id="btn-sync-prices" onclick="fetchLivePrices()">
+                        <i class="fa-solid fa-rotate"></i> Sync
+                    </button>
+                    <button class="btn btn-primary" onclick="switchView('add-asset')">
+                        <i class="fa-solid fa-plus"></i> Add Asset
+                    </button>
+                    <div class="notification-bell" onclick="toggleNotifications()">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="badge" id="notif-badge">3</span>
+                        <div class="notif-dropdown" id="notif-dropdown">
+                            <div class="flex-between" style="margin-bottom:10px;border-bottom:1px solid var(--border-color);padding-bottom:10px;">
+                                <h4 style="font-size:13px;margin:0;">Notifications</h4>
+                                <button class="btn btn-text" style="padding:3px 8px;font-size:11px;" onclick="clearNotifications(event)">Clear</button>
+                            </div>
+                            <ul id="notif-list" style="list-style:none;padding:0;margin:0;font-size:12px;color:var(--text-secondary);">
+                                <li style="padding:10px 0;border-bottom:1px solid var(--border-color);"><strong style="color:var(--accent-primary);">Market:</strong> Indian markets active.</li>
+                                <li style="padding:10px 0;border-bottom:1px solid var(--border-color);"><strong style="color:var(--loss);">Alert:</strong> Rebalancing suggested!</li>
+                                <li style="padding:10px 0;"><strong style="color:var(--profit);">Milestone:</strong> Portfolio crossed ₹2L!</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="views-container">
+                <!-- ===== DASHBOARD ===== -->
+                <section id="view-dashboard" class="view active">
+                    <div class="ticker-wrap">
+                        <div class="ticker" id="live-ticker">
+                            <span class="ticker-item"><span class="dot"></span> NSE LIVE</span>
+                            <span class="ticker-item">NIFTY 50 <span class="profit" id="tick-nifty50">--</span></span>
+                            <span class="ticker-item">SENSEX <span class="profit" id="tick-sensex">--</span></span>
+                            <span class="ticker-item">BANK NIFTY <span class="profit" id="tick-banknifty">--</span></span>
+                        </div>
+                    </div>
+                    <div style="text-align:right;font-size:10px;color:var(--text-muted);margin-bottom:10px;" id="last-updated">Updated Just Now</div>
+
+                    <div class="indices-row">
+                        <div class="index-card">
+                            <div class="idx-name">NIFTY 50</div>
+                            <div class="idx-val" id="idx-nifty50-val">--</div>
+                            <div class="idx-change profit" id="idx-nifty50-change">--</div>
+                        </div>
+                        <div class="index-card">
+                            <div class="idx-name">SENSEX</div>
+                            <div class="idx-val" id="idx-sensex-val">--</div>
+                            <div class="idx-change profit" id="idx-sensex-change">--</div>
+                        </div>
+                        <div class="index-card">
+                            <div class="idx-name">BANK NIFTY</div>
+                            <div class="idx-val" id="idx-banknifty-val">--</div>
+                            <div class="idx-change profit" id="idx-banknifty-change">--</div>
+                        </div>
+                    </div>
+
+                    <div class="portfolio-hero-card">
+                        <div class="hero-label">Total Portfolio Value</div>
+                        <div class="hero-value" id="dash-total-value">₹0</div>
+                        <div class="hero-pills">
+                            <span class="pill pill-loss" id="dash-daily-pill">0.00% today</span>
+                            <span class="pill pill-profit" id="dash-pl-pill">P&L: +₹0</span>
+                            <span class="pill pill-profit" id="dash-return-pill">+0.00% return</span>
+                        </div>
+                        <div class="hero-chart-container"><canvas id="heroSparkline"></canvas></div>
+                    </div>
+
+                    <div class="sub-stats-grid">
+                        <div class="sub-stat-card">
+                            <div class="stat-label">Invested</div>
+                            <div class="stat-val" id="dash-total-invested">₹0</div>
+                            <div class="stat-sub" id="dash-asset-count">0 assets</div>
+                        </div>
+                        <div class="sub-stat-card">
+                            <div class="stat-label">Day's P&L</div>
+                            <div class="stat-val" id="dash-daily-val">₹0</div>
+                            <div class="stat-sub" id="dash-daily-percent">0.00%</div>
+                        </div>
+                        <div class="sub-stat-card">
+                            <div class="stat-label">Total P&L</div>
+                            <div class="stat-val" id="dash-total-pl">₹0</div>
+                            <div class="stat-sub" id="dash-total-pl-pct">0.00%</div>
+                        </div>
+                        <div class="sub-stat-card">
+                            <div class="stat-label">Best Performer</div>
+                            <div class="stat-val" id="dash-best-perf">--</div>
+                            <div class="stat-sub" id="dash-best-perf-pct">--</div>
+                        </div>
+                    </div>
+
+                    <div class="holdings-header">
+                        <h3>Top Holdings</h3>
+                        <button class="btn-link" onclick="switchView('portfolio')">View all &rarr;</button>
+                    </div>
+                    <div class="holdings-list-card" id="dash-holdings-list"></div>
+
+                    <div class="holdings-header" style="margin-top:20px;">
+                        <h3>Allocation</h3>
+                    </div>
+                    <div class="holdings-list-card" id="dash-allocation-list"></div>
+                </section>
+
+                <!-- ===== PORTFOLIO ===== -->
+                <section id="view-portfolio" class="view">
+                    <div class="glass-panel">
+                        <div class="flex-between mb-4">
+                            <h3 style="font-size:16px;font-weight:600;">Your Holdings</h3>
+                            <div class="search-box">
+                                <i class="fa-solid fa-search"></i>
+                                <input type="text" id="portfolio-search" placeholder="Search assets...">
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table" id="portfolio-table">
+                                <thead>
+                                    <tr>
+                                        <th>Asset</th>
+                                        <th>Category</th>
+                                        <th>Qty</th>
+                                        <th>Cost Basis</th>
+                                        <th>LTP</th>
+                                        <th>Current Value</th>
+                                        <th>Alloc %</th>
+                                        <th>Gain / Loss</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== ADD ASSET PAGE ===== -->
+                <section id="view-add-asset" class="view">
+                    <div class="glass-panel" style="max-width:560px;">
+                        <h3 style="font-size:17px;font-weight:700;margin-bottom:4px;">Add New Asset</h3>
+                        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Fill in all fields below to add a new investment to your portfolio.</p>
+
+                        <form id="add-asset-form">
+                            <!-- Transaction Type -->
+                            <div class="form-group">
+                                <label>Transaction Type</label>
+                                <div class="radio-group">
+                                    <label class="radio-btn"><input type="radio" name="tx-type" value="buy" checked> Buy / Deposit</label>
+                                    <label class="radio-btn"><input type="radio" name="tx-type" value="sell"> Sell / Withdraw</label>
+                                </div>
+                            </div>
+
+                            <!-- Category -->
+                            <div class="form-group">
+                                <label>Category *</label>
+                                <div class="cat-grid">
+                                    <button type="button" class="cat-btn active" id="btn-cat-stock" onclick="selectCategory('STOCK')"><i class="fa-solid fa-chart-line"></i> Equity</button>
+                                    <button type="button" class="cat-btn" id="btn-cat-mf" onclick="selectCategory('MF')"><i class="fa-solid fa-layer-group"></i> Mutual Fund</button>
+                                    <button type="button" class="cat-btn" id="btn-cat-fd" onclick="selectCategory('FD')"><i class="fa-solid fa-building-columns"></i> Fixed Deposit</button>
+                                    <button type="button" class="cat-btn" id="btn-cat-etf" onclick="selectCategory('ETF')"><i class="fa-solid fa-cubes"></i> ETF</button>
+                                </div>
+                                <input type="hidden" id="asset-class" value="STOCK">
+                            </div>
+
+                            <!-- Asset Name -->
+                            <div class="form-group">
+                                <label for="asset-symbol" id="lbl-symbol">Asset Name / Symbol *</label>
+                                <input type="text" id="asset-symbol" required placeholder="e.g. RELIANCE, Parag Parikh Flexi">
+                                <div class="error-msg" id="err-symbol">Asset name is required</div>
+                            </div>
+
+                            <!-- Sector -->
+                            <div class="form-group" id="sector-group">
+                                <label for="asset-sector">Sector / Bank Name</label>
+                                <input type="text" id="asset-sector" placeholder="e.g. IT, HDFC Bank (Optional)">
+                            </div>
+
+                            <!-- Quantity + Price -->
+                            <div class="grid-2">
+                                <div class="form-group" id="qty-group" style="margin-bottom:0">
+                                    <label for="asset-qty" id="lbl-qty">Quantity *</label>
+                                    <input type="number" id="asset-qty" min="0.0001" step="any" required placeholder="0">
+                                    <div class="error-msg" id="err-qty">Enter a valid quantity</div>
+                                </div>
+                                <div class="form-group" id="price-group" style="margin-bottom:0">
+                                    <label for="asset-price" id="lbl-price">Purchase Price (₹) *</label>
+                                    <input type="number" id="asset-price" step="0.01" min="0" required placeholder="0.00">
+                                    <div class="error-msg" id="err-price">Enter a valid price</div>
+                                </div>
+                            </div>
+
+                            <!-- FD Extra Fields -->
+                            <div class="grid-2" id="fd-extra-fields" style="display:none;margin-top:12px;">
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label for="fd-rate">Interest Rate (% p.a.) *</label>
+                                    <input type="number" id="fd-rate" step="0.01" placeholder="e.g. 7.10">
+                                    <div class="error-msg" id="err-fdrate">Enter interest rate</div>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0">
+                                    <label for="fd-maturity">Maturity Date *</label>
+                                    <input type="date" id="fd-maturity">
+                                    <div class="error-msg" id="err-fdmat">Select maturity date</div>
+                                </div>
+                            </div>
+
+                            <!-- Purchase Date -->
+                            <div class="form-group" style="margin-top:12px;">
+                                <label for="asset-date">Purchase Date *</label>
+                                <input type="date" id="asset-date" required>
+                                <div class="error-msg" id="err-date">Select a date</div>
+                            </div>
+
+                            <!-- Cost Summary -->
+                            <div id="cost-summary" style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;display:none;">
+                                <div class="flex-between" style="margin-bottom:4px;">
+                                    <span style="font-size:12px;color:var(--text-muted);">Total Cost</span>
+                                    <span style="font-size:15px;font-weight:700;color:var(--text-primary);" id="cost-total">₹0</span>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary full-width" style="padding:12px;">
+                                <i class="fa-solid fa-check"></i> Save Asset
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- ===== TRANSACTIONS ===== -->
+                <section id="view-transactions" class="view">
+                    <div class="glass-panel">
+                        <div class="flex-between mb-4">
+                            <h3 style="font-size:16px;font-weight:600;">Transaction History</h3>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <button class="btn btn-danger" style="font-size:12px;padding:6px 12px;" onclick="clearAllTransactions()">
+                                    <i class="fa-solid fa-trash-can"></i> Clear
+                                </button>
+                                <select id="transaction-filter" class="filter-box">
+                                    <option value="all">All</option>
+                                    <option value="buy">Buy</option>
+                                    <option value="sell">Sell</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table" id="transactions-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Asset</th>
+                                        <th>Category</th>
+                                        <th>Type</th>
+                                        <th>Qty</th>
+                                        <th>Price (₹)</th>
+                                        <th>Total (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== ANALYTICS ===== -->
+                <section id="view-analytics" class="view">
+                    <div class="analytics-grid">
+                        <div class="chart-container glass-panel" style="grid-column:1/-1;">
+                            <h3>Sector Distribution</h3>
+                            <div class="canvas-wrapper"><canvas id="sectorChart"></canvas></div>
+                        </div>
+                        <div class="chart-container glass-panel">
+                            <h3>Asset Class Split</h3>
+                            <div class="canvas-wrapper"><canvas id="assetClassChart"></canvas></div>
+                        </div>
+                        <div class="chart-container glass-panel">
+                            <h3>Risk vs Return</h3>
+                            <div class="canvas-wrapper"><canvas id="riskReturnChart"></canvas></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== REBALANCING ===== -->
+                <section id="view-rebalancing" class="view">
+                    <div class="glass-panel">
+                        <div class="rebalance-header">
+                            <h3>Portfolio Rebalancing</h3>
+                            <p>Set target allocations per sector. Differences beyond ±5% trigger action alerts.</p>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="rebalance-table">
+                                <thead>
+                                    <tr>
+                                        <th>Sector</th>
+                                        <th>Current %</th>
+                                        <th>Target %</th>
+                                        <th>Difference</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="rebalance-summary mt-4">
+                            <button class="btn btn-primary" onclick="calculateRebalance()"><i class="fa-solid fa-calculator"></i> Calculate Rebalance</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== DATA & REPORTS ===== -->
+                <section id="view-data" class="view">
+                    <div class="dashboard-grid">
+                        <div class="stat-card">
+                            <h3 style="color:var(--accent-primary);"><i class="fa-solid fa-file-csv"></i> Import CSV</h3>
+                            <p style="font-size:12px;color:var(--text-secondary);margin:6px 0 14px;">Columns: <b>Date, Symbol, AssetType, Qty, Price, Type</b></p>
+                            <input type="file" id="csv-file" accept=".csv" style="margin-bottom:10px;font-size:12px;color:var(--text-secondary);">
+                            <button class="btn btn-primary full-width" onclick="importCSV()"><i class="fa-solid fa-upload"></i> Upload</button>
+                        </div>
+                        <div class="stat-card">
+                            <h3 style="color:var(--profit);"><i class="fa-solid fa-file-pdf"></i> Export PDF</h3>
+                            <p style="font-size:12px;color:var(--text-secondary);margin:6px 0 14px;">Download a formatted report of your portfolio.</p>
+                            <button class="btn btn-primary full-width" onclick="exportPDF()"><i class="fa-solid fa-download"></i> Download PDF</button>
+                        </div>
+                        <div class="stat-card">
+                            <h3><i class="fa-solid fa-database"></i> Backup</h3>
+                            <p style="font-size:12px;color:var(--text-secondary);margin:6px 0 14px;">Export or restore your data as JSON.</p>
+                            <div style="display:flex;gap:8px;">
+                                <button class="btn btn-text full-width" onclick="exportJSON()"><i class="fa-solid fa-download"></i> Backup</button>
+                                <button class="btn btn-text full-width" onclick="document.getElementById('json-file').click()"><i class="fa-solid fa-upload"></i> Restore</button>
+                                <input type="file" id="json-file" accept=".json" style="display:none" onchange="importJSON(event)">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/data_v4.js"></script>
+    <script src="js/app_core.js"></script>
+    <script src="js/app_features.js"></script>
+</body>
+</html>
